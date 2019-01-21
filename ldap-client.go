@@ -161,9 +161,44 @@ func (lc *LDAPClient) GetGroupsOfUser(username string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	groups := []string{}
 	for _, entry := range sr.Entries {
 		groups = append(groups, entry.GetAttributeValue("cn"))
 	}
+
 	return groups, nil
+}
+
+// GetAllUsers returns all users
+func (lc *LDAPClient) GetAllUsers(userField string) ([]string, error) {
+	err := lc.Connect()
+	if err != nil {
+		return nil, err
+	}
+	defer lc.Close()
+
+	if lc.BindDN != "" && lc.BindPassword != "" {
+		err = lc.Conn.Bind(lc.BindDN, lc.BindPassword)
+		if err != nil {
+			return nil, err
+		}
+	}
+	searchRequest := ldap.NewSearchRequest(
+		lc.Base,
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		"(&(objectCategory=person)(objectClass=user))",
+		[]string{userField},
+		nil,
+	)
+	sr, err := lc.Conn.Search(searchRequest)
+	if err != nil {
+		return nil, err
+	}
+	users := []string{}
+	for _, entry := range sr.Entries {
+		users = append(users, entry.GetAttributeValue(userField))
+	}
+	return users, nil
+
 }
