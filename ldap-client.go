@@ -150,14 +150,35 @@ func (lc *LDAPClient) GetGroupsOfUser(username string) ([]string, error) {
 		}
 	}
 
+	// Get the users DN
+	// Search for the given username
 	searchRequest := ldap.NewSearchRequest(
 		lc.Base,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf(lc.GroupFilter, username),
+		fmt.Sprintf(lc.UserFilter, username),
+		[]string{"dn"},
+		nil,
+	)
+
+	sr, err := lc.Conn.Search(searchRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(sr.Entries) != 1 {
+		return nil, errors.New("User does not exist")
+	}
+
+	userdn := sr.Entries[0].DN
+
+	searchRequest = ldap.NewSearchRequest(
+		lc.Base,
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		fmt.Sprintf(lc.GroupFilter, userdn),
 		[]string{"cn"}, // can it be something else than "cn"?
 		nil,
 	)
-	sr, err := lc.Conn.Search(searchRequest)
+	sr, err = lc.Conn.Search(searchRequest)
 	if err != nil {
 		return nil, err
 	}
