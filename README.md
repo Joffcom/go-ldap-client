@@ -14,7 +14,7 @@ package main
 import (
 	"log"
 
-	"github.com/jtblin/go-ldap-client"
+	"github.com/joffcom/go-ldap-client"
 )
 
 func main() {
