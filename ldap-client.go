@@ -223,3 +223,39 @@ func (lc *LDAPClient) GetAllUsers(userField string) ([]string, error) {
 	return users, nil
 
 }
+
+// GetAllGroups returns all the available groups
+func (lc *LDAPClient) GetAllGroups() ([]string, error) {
+	err := lc.Connect()
+	if err != nil {
+		return nil, err
+	}
+	defer lc.Close()
+
+	if lc.BindDN != "" && lc.BindPassword != "" {
+		err = lc.Conn.Bind(lc.BindDN, lc.BindPassword)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	searchRequest := ldap.NewSearchRequest(
+		lc.Base,
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		"(objectCategory=group)",
+		[]string{"cn"},
+		nil,
+	)
+
+	sr, err := lc.Conn.Search(searchRequest)
+
+	if err != nil {
+		return nil, err
+	}
+	groups := []string{}
+	for _, entry := range sr.Entries {
+		groups = append(groups, entry.GetAttributeValue("cn"))
+	}
+
+	return groups, nil
+}
