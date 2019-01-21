@@ -47,3 +47,19 @@ func ExampleLDAPClient_GetGroupsOfUser() {
 	}
 	log.Printf("Groups: %+v", groups)
 }
+
+// ExampleLDAPClient_GetAllUsers shows how to retrieve all users
+func ExampleLDAPClient_GetAllUsers() {
+	client := &ldap.LDAPClient{
+		Base:        "dc=example,dc=com",
+		Host:        "ldap.example.com",
+		Port:        389,
+		GroupFilter: "(memberUid=%s)",
+	}
+	defer client.Close()
+	users, err := client.GetAllUsers("sAMAccountName")
+	if err != nil {
+		log.Fatalf("Error getting users: %+v", err)
+	}
+	log.Printf("Users: %+v", users)
+}
