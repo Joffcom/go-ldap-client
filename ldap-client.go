@@ -140,6 +140,15 @@ func (lc *LDAPClient) GetGroupsOfUser(username string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer lc.Close()
+
+	// First Bind with read only user
+	if lc.BindDN != "" && lc.BindPassword != "" {
+		err = lc.Conn.Bind(lc.BindDN, lc.BindPassword)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	searchRequest := ldap.NewSearchRequest(
 		lc.Base,
