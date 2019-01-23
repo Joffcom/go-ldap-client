@@ -181,7 +181,7 @@ func (lc *LDAPClient) GetAllUsers(userField string) ([]string, error) {
 
 // GetAllGroups returns all the available groups
 func (lc *LDAPClient) GetAllGroups() ([]string, error) {
-	grousSearchResult, err := lc.doSearch("(objectCategory=group)", []string{"cn"})
+	groupsSearchResult, err := lc.doSearch("(objectCategory=group)", []string{"cn"})
 
 	if err != nil {
 		return nil, err
@@ -189,7 +189,7 @@ func (lc *LDAPClient) GetAllGroups() ([]string, error) {
 
 	groups := []string{}
 
-	for _, entry := range grousSearchResult.Entries {
+	for _, entry := range groupsSearchResult.Entries {
 		groups = append(groups, entry.GetAttributeValue("cn"))
 	}
 
