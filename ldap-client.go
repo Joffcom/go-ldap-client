@@ -75,30 +75,9 @@ func (lc *LDAPClient) Close() {
 
 // Authenticate authenticates the user against the ldap backend.
 func (lc *LDAPClient) Authenticate(username, password string) (bool, map[string]string, error) {
-	err := lc.Connect()
-	if err != nil {
-		return false, nil, err
-	}
 
-	// First bind with a read only user
-	if lc.BindDN != "" && lc.BindPassword != "" {
-		err := lc.Conn.Bind(lc.BindDN, lc.BindPassword)
-		if err != nil {
-			return false, nil, err
-		}
-	}
+	userSearchResult, err := lc.doSearch(fmt.Sprintf(lc.UserFilter, username), append(lc.Attributes, "dn"))
 
-	attributes := append(lc.Attributes, "dn")
-	// Search for the given username
-	searchRequest := ldap.NewSearchRequest(
-		lc.Base,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf(lc.UserFilter, username),
-		attributes,
-		nil,
-	)
-
-	sr, err := lc.Conn.Search(searchRequest)
 	if err != nil {
 		return false, nil, err
 	}
@@ -136,55 +115,25 @@ func (lc *LDAPClient) Authenticate(username, password string) (bool, map[string]
 
 // GetGroupsOfUser returns the group for a user.
 func (lc *LDAPClient) GetGroupsOfUser(username string) ([]string, error) {
-	err := lc.Connect()
-	if err != nil {
-		return nil, err
-	}
-	defer lc.Close()
-
-	// First Bind with read only user
-	if lc.BindDN != "" && lc.BindPassword != "" {
-		err = lc.Conn.Bind(lc.BindDN, lc.BindPassword)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	// Get the users DN
-	// Search for the given username
-	searchRequest := ldap.NewSearchRequest(
-		lc.Base,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf(lc.UserFilter, username),
-		[]string{"dn"},
-		nil,
-	)
-
-	sr, err := lc.Conn.Search(searchRequest)
+	dnSearchResult, err := lc.doSearch(fmt.Sprintf(lc.UserFilter, username), []string{"dn"})
 	if err != nil {
 		return nil, err
 	}
 
-	if len(sr.Entries) != 1 {
+	if len(dnSearchResult.Entries) != 1 {
 		return nil, errors.New("User does not exist")
 	}
 
-	userdn := sr.Entries[0].DN
+	userdn := dnSearchResult.Entries[0].DN
 
-	searchRequest = ldap.NewSearchRequest(
-		lc.Base,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		fmt.Sprintf(lc.GroupFilter, userdn),
-		[]string{"cn"}, // can it be something else than "cn"?
-		nil,
-	)
-	sr, err = lc.Conn.Search(searchRequest)
+	groupSearchResult, err := lc.doSearch(fmt.Sprintf(lc.GroupFilter, userdn), []string{"cn"})
+
 	if err != nil {
 		return nil, err
 	}
 
 	groups := []string{}
-	for _, entry := range sr.Entries {
+	for _, entry := range groupSearchResult.Entries {
 		groups = append(groups, entry.GetAttributeValue("cn"))
 	}
 
@@ -193,39 +142,39 @@ func (lc *LDAPClient) GetGroupsOfUser(username string) ([]string, error) {
 
 // GetAllUsers returns all users
 func (lc *LDAPClient) GetAllUsers(userField string) ([]string, error) {
-	err := lc.Connect()
-	if err != nil {
-		return nil, err
-	}
-	defer lc.Close()
+	usersSearchResult, err := lc.doSearch("(&(objectCategory=person)(objectClass=user))", []string{userField})
 
-	if lc.BindDN != "" && lc.BindPassword != "" {
-		err = lc.Conn.Bind(lc.BindDN, lc.BindPassword)
-		if err != nil {
-			return nil, err
-		}
-	}
-	searchRequest := ldap.NewSearchRequest(
-		lc.Base,
-		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		"(&(objectCategory=person)(objectClass=user))",
-		[]string{userField},
-		nil,
-	)
-	sr, err := lc.Conn.Search(searchRequest)
 	if err != nil {
 		return nil, err
 	}
+
 	users := []string{}
-	for _, entry := range sr.Entries {
+
+	for _, entry := range usersSearchResult.Entries {
 		users = append(users, entry.GetAttributeValue(userField))
 	}
-	return users, nil
 
+	return users, nil
 }
 
 // GetAllGroups returns all the available groups
 func (lc *LDAPClient) GetAllGroups() ([]string, error) {
+	grousSearchResult, err := lc.doSearch("(objectCategory=group)", []string{"cn"})
+
+	if err != nil {
+		return nil, err
+	}
+
+	groups := []string{}
+
+	for _, entry := range grousSearchResult.Entries {
+		groups = append(groups, entry.GetAttributeValue("cn"))
+	}
+
+	return groups, nil
+}
+
+func (lc *LDAPClient) doSearch(filter string, attributes []string) (*ldap.SearchResult, error) {
 	err := lc.Connect()
 	if err != nil {
 		return nil, err
@@ -242,8 +191,8 @@ func (lc *LDAPClient) GetAllGroups() ([]string, error) {
 	searchRequest := ldap.NewSearchRequest(
 		lc.Base,
 		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
-		"(objectCategory=group)",
-		[]string{"cn"},
+		filter,
+		attributes,
 		nil,
 	)
 
@@ -252,10 +201,6 @@ func (lc *LDAPClient) GetAllGroups() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	groups := []string{}
-	for _, entry := range sr.Entries {
-		groups = append(groups, entry.GetAttributeValue("cn"))
-	}
 
-	return groups, nil
+	return sr, nil
 }
