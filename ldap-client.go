@@ -75,8 +75,30 @@ func (lc *LDAPClient) Close() {
 
 // Authenticate authenticates the user against the ldap backend.
 func (lc *LDAPClient) Authenticate(username, password string) (bool, map[string]string, error) {
+	err := lc.Connect()
+	if err != nil {
+		return false, nil, err
+	}
 
-	userSearchResult, err := lc.doSearch(fmt.Sprintf(lc.UserFilter, username), append(lc.Attributes, "dn"))
+	// First bind with a read only user
+	if lc.BindDN != "" && lc.BindPassword != "" {
+		err := lc.Conn.Bind(lc.BindDN, lc.BindPassword)
+		if err != nil {
+			return false, nil, err
+		}
+	}
+
+	attributes := append(lc.Attributes, "dn")
+	// Search for the given username
+	searchRequest := ldap.NewSearchRequest(
+		lc.Base,
+		ldap.ScopeWholeSubtree, ldap.NeverDerefAliases, 0, 0, false,
+		fmt.Sprintf(lc.UserFilter, username),
+		attributes,
+		nil,
+	)
+
+	sr, err := lc.Conn.Search(searchRequest)
 
 	if err != nil {
 		return false, nil, err
