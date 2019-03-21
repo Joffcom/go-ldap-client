@@ -8,7 +8,7 @@ import (
 )
 
 var base, bindDN, bindPassword, groupFilter, host, password, serverName, userFilter, username string
-var port int
+var port, pageSize int
 var useSSL bool
 var skipTLS bool
 
@@ -23,6 +23,7 @@ func main() {
 		Port:         port,
 		UseSSL:       useSSL,
 		SkipTLS:      skipTLS,
+		PageSize:     uint32(pageSize),
 		BindDN:       bindDN,
 		BindPassword: bindPassword,
 		UserFilter:   userFilter,
@@ -56,6 +57,7 @@ func init() {
 	flag.StringVar(&host, "host", "ldap.example.com", "LDAP host")
 	flag.StringVar(&password, "password", "", "Password")
 	flag.IntVar(&port, "port", 389, "LDAP port")
+	flag.IntVar(&pageSize, "pagesize", 500, "Amount of results to return on each page")
 	flag.StringVar(&userFilter, "user-filter", "(uid=%s)", "User filter")
 	flag.StringVar(&username, "username", "", "Username")
 	flag.StringVar(&serverName, "server-name", "", "Server name for SSL (if use-ssl is set)")

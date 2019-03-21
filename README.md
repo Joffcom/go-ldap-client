@@ -23,6 +23,7 @@ func main() {
 		Host:         "ldap.example.com",
 		Port:         389,
 		UseSSL:       false,
+		PageSize:     500,
 		BindDN:       "uid=readonlysuer,ou=People,dc=example,dc=com",
 		BindPassword: "readonlypassword",
 		UserFilter:   "(uid=%s)",

@@ -19,6 +19,7 @@ type LDAPClient struct {
 	Host               string
 	ServerName         string
 	UserFilter         string // e.g. "(uid=%s)"
+	PageSize           uint32
 	Conn               *ldap.Conn
 	Port               int
 	InsecureSkipVerify bool
@@ -218,7 +219,7 @@ func (lc *LDAPClient) doSearch(filter string, attributes []string) (*ldap.Search
 		nil,
 	)
 
-	sr, err := lc.Conn.Search(searchRequest)
+	sr, err := lc.Conn.SearchWithPaging(searchRequest, lc.PageSize)
 
 	if err != nil {
 		return nil, err

@@ -59,6 +59,7 @@ func setupClient() *ldap.LDAPClient {
 		Base:         "dc=example,dc=com",
 		Host:         "ldap.example.com",
 		Port:         389,
+		PageSize:     500,
 		UseSSL:       false,
 		BindDN:       "uid=readonlysuer,ou=People,dc=example,dc=com",
 		BindPassword: "readonlypassword",
